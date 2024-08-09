@@ -11,5 +11,8 @@ CHIP Inc16 {
     OUT out[16];
 
     PARTS:
-    Add16(a=in, b=true, out=out);
+    // The book says there are more efficient ways
+    Add16(a=in, b[0]=true, out=out);
+
+    // alternative - half adder chain
 }
