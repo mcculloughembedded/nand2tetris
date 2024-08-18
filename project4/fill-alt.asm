@@ -87,8 +87,8 @@ M=D
 
     (END)
 
-    // Reset loop if whole screen is clear
-    // if(n==0) goto CLEAR
+    // go back to the start if the end of the screen has been reached
+    // if(n==0) goto START
     @n
     D=M
     @START
