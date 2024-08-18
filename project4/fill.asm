@@ -14,63 +14,51 @@
 // Pseudo Code
 //
 // (CLEAR)
-//     n = 512
+//     n = 8192
 //     (CLEAR_LOOP)
-//         if(KBD!=0) goto WRITE
-//         screen[n] = 0
 //         n = n-1
+//         if(KBD!=0) goto WRITE
+//         SCREENscreen[n] = 0
 //         goto CLEAR_LOOP
 //
 // (WRITE)
-//     n = 512
+//     n = 8192
 //     (WRITE_LOOP)
 //         if(KBD==0) goto CLEAR
-//         screen[n] = -1
 //         n = n-1
+//         SCREEN[n] = -1
 //         goto LOOP
 
-(MAIN)
-    (CLEAR)
-    // m = 512
-    @512
-    D=A
-    @m
-    M=D
+@8192
+D=A
+@n
+M=D
 
-    (CLEAR_LOOP)
-    // if KBD!=0 goto WRITE
-    @KBD
-    D=M
-    @WRITE
-    D;JNE
-
-    @SCREEN
-    M=0
-
-    (WRITE)
-    // m = 512
-    @512
-    D=A
-    @m
-    M=D
-    (WRITE_LOOP)
-    // if KBD==0 goto CLEAR
-    @KBD
-    D=M
-    @CLEAR
-    D;JEQ
-    // screen[n] = 0
-    @SCREEN
-    D=M
-    @n
-    D=D+M
-    @D
-    M=-1
-
+(LOOP)
     // n=n-1
     @n
     M=M-1
 
-    // goto CLEAR_LOOP
-    @CLEAR_LOOP
+    // set next block
+    @SCREEN
+    D=A
+    @n
+    A=D+M
+    M=-1
+
+    // if(n==0) goto STOP
+    @n
+    D=M
+    @STOP
+    D;JEQ
+
+    // goto LOOP
+    @LOOP
+    0;JMP
+
+(STOP)
+
+// infinite while
+(END)
+    @END
     0;JMP
