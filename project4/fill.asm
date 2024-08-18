@@ -1,8 +1,6 @@
-// Program: Multiply
-// Multiplies the valuse in R0 and R1 and stores the result in R2
-// Usage: Load values into R0 and R1
-//        R1 > 0 and R2 > 0
-//        R0 * R1 < 32768
+// Program: fill
+// Writes the screen black when any key is pressed
+// Clears the screen when no key is pressed
 
 // Strategy
 // Two loops
@@ -14,51 +12,101 @@
 // Pseudo Code
 //
 // (CLEAR)
-//     n = 8192
+//     n = 8192 // size of screen memory
 //     (CLEAR_LOOP)
-//         n = n-1
 //         if(KBD!=0) goto WRITE
-//         SCREENscreen[n] = 0
+//         n = n-1
+//         SCREEN[n] = 0
+//         if(n==0) goto CLEAR
 //         goto CLEAR_LOOP
 //
 // (WRITE)
-//     n = 8192
+//     n = 8192 // size of screen memory
 //     (WRITE_LOOP)
 //         if(KBD==0) goto CLEAR
 //         n = n-1
 //         SCREEN[n] = -1
+//         if(n==0) goto CLEAR
 //         goto LOOP
 
+// The screen writes/clears starting from the bottom right and ending
+// in the top left
+
+(CLEAR)
 @8192
 D=A
 @n
 M=D
 
-(LOOP)
+(CLEAR_LOOP)
+    // If key is pressed go to write
+    @KBD
+    D=M
+    @WRITE
+    D;JNE
+
+    // n=n-1
+    @n
+    M=M-1
+
+    // clear next block
+    // SCREEN[n] = 0
+    @SCREEN
+    D=A
+    @n
+    A=D+M
+    M=0
+
+    // Default is to clear the screen
+    // if(n==0) goto CLEAR
+    @n
+    D=M
+    @CLEAR
+    D;JEQ
+
+    // goto LOOP
+    @CLEAR_LOOP
+    0;JMP
+
+
+(WRITE)
+@8192
+D=A
+@n
+M=D
+
+(WRITE_LOOP)
+    // If no key is pressed go to clear
+    @KBD
+    D=M
+    @CLEAR
+    D;JEQ
+
     // n=n-1
     @n
     M=M-1
 
     // set next block
+    // SCREEN[n] = -1
     @SCREEN
     D=A
     @n
     A=D+M
     M=-1
 
-    // if(n==0) goto STOP
+    // Default is to clear the screen
+    // if(n==0) goto CLEAR
     @n
     D=M
-    @STOP
+    @CLEAR
     D;JEQ
 
     // goto LOOP
-    @LOOP
+    @WRITE_LOOP
     0;JMP
 
-(STOP)
-
 // infinite while
+// safety - should never get here
 (END)
     @END
     0;JMP

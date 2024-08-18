@@ -1,4 +1,4 @@
-// Program: Multiply
+// Program: multiply
 // Multiplies the valuse in R0 and R1 and stores the result in R2
 // Usage: Load values into R0 and R1
 //        R1 > 0 and R2 > 0
