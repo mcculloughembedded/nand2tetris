@@ -1,0 +1,100 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/5/CPU.hdl
+/**
+ * The Hack Central Processing unit (CPU).
+ * Parses the binary code in the instruction input and executes it according to the
+ * Hack machine language specification. In the case of a C-instruction, computes the
+ * function specified by the instruction. If the instruction specifies to read a memory
+ * value, the inM input is expected to contain this value. If the instruction specifies
+ * to write a value to the memory, sets the outM output to this value, sets the addressM
+ * output to the target address, and asserts the writeM output (when writeM = 0, any
+ * value may appear in outM).
+ * If the reset input is 0, computes the address of the next instruction and sets the
+ * pc output to that value. If the reset input is 1, sets pc to 0.
+ * Note: The outM and writeM outputs are combinational: they are affected by the
+ * instruction's execution during the current cycle. The addressM and pc outputs are
+ * clocked: although they are affected by the instruction's execution, they commit to
+ * their new values only in the next cycle.
+ */
+CHIP CPU {
+
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset==1) or continue executing
+                         // the current program (reset==0).
+
+    OUT outM[16],        // M value output
+        writeM,          // Write to M?
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+
+    PARTS:
+    // **********dest=comp*************
+    // A Register
+    // If this is an A instruction, load the instruction into
+    // the A Register, else it is a C instruction and the ALU
+    // output should be loaded into the A register if
+    // instruction[5] (third d bit} is set
+    Mux16(a=instruction, b=aluOut, sel=instruction[15], out=ARegIn);
+    // Load A Register
+    // For an A Type instruction it must be high
+    // For a C Type instruction it must be d2
+    Mux(a=true, b=instruction[5], sel=instruction[15], out=loadA);
+    ARegister(in=ARegIn, load=loadA, out=ARegOut, out[0..14]=addressM);
+
+    // D Register
+    // if middle d bit is set the result should be stored
+    // in the D Register
+    // Should not load if it is an A instruction
+    Mux(a=false, b=instruction[4], sel=instruction[15], out=loadD);
+    DRegister(in=aluOut, load=loadD, out=DRegOut);
+
+    // 'a' bit of instruction
+    // if a == 1 ALU is fed by inM, else ALU is fed by A Register
+    Mux16(a=ARegOut, b=inM, sel=instruction[12], out=aluY);
+
+    // ALU
+    // Not much to do here. The comp(cccccc) part of the instruction
+    // matches the ALU input exactly
+    ALU(x=DRegOut, y=aluY, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=aluOut, out=outM, zr=zrOut, ng=ngOut);
+
+    // WriteM
+    // If A instruction writeM=0
+    // If C instruction writeM=d0
+    Mux(a=false, b=instruction[3], sel=instruction[15], out=writeM);
+    // *******************************************
+
+    // Jump logic
+    // j2 = 0
+    Not(in=ngOut, out=notng);
+    Not(in=zrOut, out=notzr);
+    And(a=notng, b=notzr, out=greaterthan);
+    Or(a=notng, b=zrOut, out=zerogreaterthan);
+
+    // Mux4Way
+    Mux(a=false, b=greaterthan, sel=instruction[0], out=ab0);
+    Mux(a=zrOut, b=zerogreaterthan, sel=instruction[0] , out=cd0);
+    Mux(a=ab0, b=cd0, sel=instruction[1], out=out0);
+
+    // j2 = 1
+    Or(a=ngOut, b=zrOut, out=zerolessthan);
+
+    // Mux4Way
+    Mux(a=ngOut, b=notzr, sel=instruction[0], out=ab1);
+    Mux(a=zerolessthan, b=true, sel=instruction[0] , out=cd1);
+    Mux(a=ab1, b=cd1, sel=instruction[1], out=out1);
+
+    // Select output from j2=0 or j2=1
+    Mux(a=out0, b=out1, sel=instruction[2], out=jump);
+
+    // Program Counter
+    // If A instruction
+    //  load = false, increment = true
+    // If C instruction
+    //  load if jump
+    Mux(a=false, b=jump, sel=instruction[15], out=load);
+    PC(in=ARegOut, load=load, inc=true, reset=reset, out[0..14]=pc);
+}

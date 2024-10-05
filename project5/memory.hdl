@@ -26,9 +26,15 @@ CHIP Memory {
 
     PARTS:
     // Load
+    // Both bit 13 and bit 14 are set. Implies address >= 0x6000
+    And(a=address[13], b=address[14], out=addrhigh);
+
+    // Don't load if address > 0x5FFF
+    Mux(a=load, b=false, sel=addrhigh, out=loadsel);
+
     // Load Screen if bit 14 is set
     // Load RAM if bit 14 is not set
-    DMux(in=load, sel=address[14], a=ramload, b=screenload);
+    DMux(in=loadsel, sel=address[14], a=ramload, b=screenload);
 
     // The three memory blocks
     // 0x0000 -> 0x3FFF
@@ -39,9 +45,33 @@ CHIP Memory {
     Keyboard(out=keyout);
 
     // Select output
-    // If bit 14 is set, bits 0..12 map directly to the 8K screen memory
+    // Requirements for OUT
+    // 1. RAM16K out if 0x0000 <= address <= 0x3FFF
+    // 2. SCREEN out if 0x4000 <= address <= 0x5FFF
+    // 3. KEYBOARD out if address == 0x6000
+    // 4. 0 if address > 0x6000
+
+    // How to proceed?
+    // Are any bits in address [0..12] set and bits 13 and 14 are set?
+    // If yes, address > 0x6000 and out should equal 0
+    // If no and bits 13 and 14 are set, then address == 0x6000 and out == keyboard state
+    // Otherwise out equals previously selected RAM or SCREEN memory
+
+    // Check for 1 and 2
+    // If bit 14 is set, bits 0..12 map directly to the 8K SCREEN memory
+    // Otherwise, bit 0..13 map to the RAM
     Mux16(a=ramout, b=screenout, sel=address[14], out=ramorscreen);
-    // Both bit 13 and bit 14 are set
-    And(a=address[13], b=address[14], out=keysel);
-    Mux16(a=ramorscreen, b=keyout, sel=keysel, out=out);
+
+    // Check for 4
+    // Are any bits in address[0..12] set?
+    Or8Way(in=address[0..7], out=addresslow);
+    Or8Way(in[0..4]=address[8..12], in[5..7]=false, out=addresshigh);
+    Or(a=addresslow, b=addresshigh, out=addressset);
+    // Is address > 0x6000?
+    And(a=addressset, b=addrhigh, out=outzero);
+
+    // Check for 3
+    // Is address == 0x6000? (outzero == 0 and bits 13 and 14 are set)
+    Mux16(a=ramorscreen, b=keyout, sel=addrhigh, out=outtemp);
+    Mux16(a=outtemp, b=false, sel=outzero, out=out);
 }

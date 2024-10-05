@@ -1,0 +1,31 @@
+output-list in%D1.6.1 load%B2.1.2 address%B1.15.1 out%D1.6.1;
+
+echo "Before you run this script, select the 'Screen' option from the 'View' menu";
+
+// Check that setting address > 0x5FFF does not write to screen
+set in -1,
+set load 1,
+set address %X6001,
+tick,
+output;
+tock,
+output;
+
+
+// Check that 0 is output when the address is > 0x6000, even if a key is pressed
+set in -1,
+set load 0,
+set address %X6001,
+
+echo "Hold down Y",
+// It's important to keep holding the key down since if the system is busy,
+// the memory will zero itself before being outputted.
+
+while out <> 89 {
+    tick, tock;     // tick, tock prevents hang if sync. parts used in KB path.
+}
+
+// Here we expect out == 0
+
+clear-echo,
+output;
